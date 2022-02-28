@@ -1,0 +1,124 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Sample app to show event source mapping between SQS and Lambda
+  
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 15
+    Environment:
+      Variables:
+        TABLE_NAME: !Ref SampleTable
+        ENDPOINT_OVERRIDE: ""
+        QUEUE_URL: ""
+
+Resources:
+  SendMessageFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: hello-world/
+      Handler: app.sendMessage
+      Policies:
+        - SQSSendMessagePolicy: # SAM Policy template for sending message to queue
+            QueueName: TestQueue.fifo # Replace with your FIFO queue name
+      Runtime: nodejs14.x
+      Architectures:
+        - x86_64
+      Events:
+        SendMessage:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /send-message
+            Method: post
+  ReadMessageFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: hello-world/
+      Handler: app.readMessages
+      Runtime: nodejs14.x
+      Architectures:
+        - x86_64
+      Policies:
+        - SQSPollerPolicy: # SAM Policy template for reading messages from queue
+            QueueName: TestQueue.fifo # Replace with your FIFO queue name
+      Events:
+        ReadMessage:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /read-messages
+            Method: get
+  DeleteMessageFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: hello-world/
+      Handler: app.deleteMessage
+      Runtime: nodejs14.x
+      Policies:
+        - SQSPollerPolicy:
+            QueueName: TestQueue.fifo      
+      Architectures:
+        - x86_64
+      Events:
+        DeleteMessage:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /delete-message
+            Method: post
+  MessageHandlerFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: hello-world/
+      Handler: app.handleMessages
+      Runtime: nodejs14.x
+      Policies:
+        - SQSPollerPolicy:
+            QueueName: TestQueue.fifo # Replace with your FIFO queue name
+        - DynamoDBCrudPolicy: # SAM Policy template for performing CRUD operation on DynamoDB
+            TableName: !Ref SampleTable
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref SampleTable
+          ENDPOINT_OVERRIDE: ""
+      Architectures:
+        - x86_64
+      Events:
+        SQSEvent:
+          Type: SQS
+          Properties:
+            Queue: arn:aws:sqs:ap-south-1:421521792938:TestQueue.fifo # Replace with your own FIFO queue ARN
+            Enabled: true
+  SampleTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName: messages_table
+      PrimaryKey:
+        Name: messageId
+        Type: String
+
+
+Outputs:
+  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
+  # Find out more about other implicit resources you can reference within SAM
+  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  SendMessageApi:
+    Description: "API Gateway endpoint URL for Prod stage for pushing message to SQS"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/send-message/"
+  ReadMessageApi:
+    Description: "API Gateway endpoint URL for Prod stage for reading and deleting messages from SQS"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/read-messages/"
+  DeleteMessageApi:
+    Description: "API Gateway endpoint URL for Prod stage for deleting messages from SQS"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/delete-message/"
+  SendMessageFunction:
+    Description: "Send Message Lambda Function ARN"
+    Value: !GetAtt SendMessageFunction.Arn
+  ReadMessageFunction:
+    Description: "Read Message Lambda Function ARN"
+    Value: !GetAtt ReadMessageFunction.Arn
+  DeleteMessageFunction:
+    Description: "Delete Message Lambda Function ARN"
+    Value: !GetAtt DeleteMessageFunction.Arn
+  MessageHandlerFunction:
+    Description: "Message Handler Lambda Function ARN"
+    Value: !GetAtt MessageHandlerFunction.Arn
+    

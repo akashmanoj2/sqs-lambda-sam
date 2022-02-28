@@ -1,0 +1,12 @@
+{
+    "MessageHandlerFunction": {
+        "ENDPOINT_OVERRIDE": "http://dynamodb:8000",
+        "TABLE_NAME": "messages_table",
+        "QUEUE_URL": "https://sqs.ap-south-1.amazonaws.com/421521792938/TestQueue.fifo"
+    },
+    "SendMessageFunction": {
+        "ENDPOINT_OVERRIDE": "http://dynamodb:8000",
+        "TABLE_NAME": "messages_table",
+        "QUEUE_URL": "https://sqs.ap-south-1.amazonaws.com/421521792938/TestQueue.fifo"
+    }
+}
