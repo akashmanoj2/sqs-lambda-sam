@@ -107,14 +107,16 @@ exports.deleteMessage = async (event, context) => {
 };
 
 exports.handleMessages = async (event, context) => {
-    try {
-        console.log("-------------Message handler invoked----------------");
-        let index = 1;
+    const batchItemFailures = [];
 
-        console.log(`Request received - `, event);
-        console.log(`Request length - `, event.Records.length);
+    console.log("-------------Message handler invoked----------------");
+    let index = 1;
 
-        for (const record of event.Records) {
+    console.log(`Request received - `, event);
+    console.log(`Request length - `, event.Records.length);
+
+    for (const record of event.Records) {
+        try {
             console.log(`Received Record ${index++}: `, JSON.stringify(record));
             // let deletedRecord;
 
@@ -134,11 +136,18 @@ exports.handleMessages = async (event, context) => {
             //     deletedRecord = await deleteMessage(record.receiptHandle);
             // }
             // console.log('Deleted successfully - ', JSON.stringify(deletedRecord));
-        }
+        } catch (error) {
+            console.log("Error occured while processing : ", error);
 
-        return {};
-    } catch (err) {
-        console.log(err);
-        throw err;
+            batchItemFailures.push({
+                itemIdentifier: record.messageId
+            });
+        }
     }
+
+    console.log("batchItemFailures - ", batchItemFailures);
+
+    return {
+        batchItemFailures
+    };
 };

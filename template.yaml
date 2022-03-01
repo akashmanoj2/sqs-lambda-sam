@@ -87,6 +87,8 @@ Resources:
           Properties:
             Queue: arn:aws:sqs:ap-south-1:421521792938:TestQueue.fifo # Replace with your own FIFO queue ARN
             Enabled: true
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
   SampleTable:
     Type: AWS::Serverless::SimpleTable
     Properties:
